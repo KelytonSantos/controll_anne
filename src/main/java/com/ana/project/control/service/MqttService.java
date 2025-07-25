@@ -10,7 +10,6 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.ana.project.control.model.ClimateMeasurements;
@@ -24,8 +23,6 @@ public class MqttService implements MqttCallback, ApplicationListener<Applicatio
     private final MqttClient mqttClient;
     private double temperature;
     private double humidity;
-
-    private volatile boolean initialSaveDone = false;
 
     @Autowired
     private ClimateMeasurementsRepository climateMeasurementsRepo;
@@ -62,10 +59,8 @@ public class MqttService implements MqttCallback, ApplicationListener<Applicatio
                 System.out
                         .println("Temp: " + this.temperature + ", Umidade: " + this.humidity);
 
-                if (!initialSaveDone) {
-                    performSave();
-                    initialSaveDone = true;
-                }
+                performSave();
+
             } else {
                 System.err.println("Payload não contém os campos esperados.");
             }
@@ -88,23 +83,6 @@ public class MqttService implements MqttCallback, ApplicationListener<Applicatio
                 OffsetDateTime.now());
 
         climateMeasurementsRepo.save(measurement);
-    }
-
-    // @PostConstruct
-    // public void initialSave() {
-    // performSave();
-    // System.out.println("intial Save____-----_____----____-----");
-    // }
-
-    @Scheduled(cron = "0 0 */2 * * *")
-    public void saveClimateDataPeriodically() {
-        if (!initialSaveDone) {
-            System.out.println(">>> Agendador esperando pela primeira mensagem antes de salvar...");
-            return;
-        }
-
-        System.out.println(">>> Executando salvamento agendado (a cada 2 horas)...");
-        performSave();
     }
 
     public double getTemperature() {
